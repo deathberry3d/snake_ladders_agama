@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Snake & Ladder - Animated Deluxe</title>
+
+<style>
+
+body{
+background:#222831;
+font-family:Arial;
+color:white;
+text-align:center;
+}
+
+canvas{
+background:#eeeeee;
+margin-top:20px;
+border-radius:12px;
+}
+
+button{
+padding:12px;
+font-size:16px;
+background:#00adb5;
+color:white;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+.popup{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:white;
+color:black;
+padding:20px;
+border-radius:10px;
+width:320px;
+box-shadow:0 0 20px black;
+}
+
+input{
+padding:8px;
+width:90%;
+margin-top:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Snake & Ladder - Animated Deluxe</h1>
+
+<canvas id="board" width="500" height="500"></canvas>
+
+<h2 id="dice">🎲 Dice:</h2>
+
+<h3 id="status">Player 1's Turn</h3>
+
+<button id="roll">Roll Dice</button>
+
+<div id="popup"></div>
+
+<script>
+
+const canvas=document.getElementById("board");
+const ctx=canvas.getContext("2d");
+
+const size=50;
+
+let playerNames=["Player 1","Player 2"];
+
+let playerPos=[1,1];
+let currentPlayer=0;
+
+let asked=new Set();
+
+const snakes={
+17:7,
+54:34,
+62:19,
+98:79
+};
+
+const ladders={
+4:14,
+9:31,
+20:38,
+28:84,
+40:59,
+63:81
+};
+
+const questions={
+
+5:["Apakah nama kerajaan Islam yang berpusat di Baghdad?",
+"kerajaan abbasiyah"],
+
+11:["Apakah nama kerajaan Islam yang berpusat di Istanbul?",
+"kerajaan uthmaniyah"],
+
+18:["Siapakah pengasas Kerajaan Abbasiyah?",
+"abu al-abbas as-saffah"],
+
+23:["Siapakah pengasas Kerajaan Uthmaniyah?",
+"uthman bin ertughrul"],
+
+36:["Kerajaan manakah terkenal perkembangan ilmu?",
+"kerajaan abbasiyah"],
+
+44:["Kerajaan manakah terkenal kekuatan tentera?",
+"kerajaan uthmaniyah"],
+
+52:["Pusat Abbasiyah?",
+"baghdad"],
+
+67:["Pusat Uthmaniyah?",
+"istanbul"],
+
+74:["Agama asas kedua kerajaan?",
+"islam"],
+
+89:["Persamaan Abbasiyah dan Uthmaniyah?",
+"kedua-duanya ialah kerajaan islam"],
+
+2:["Siapakah nabi Ulul Azmi bina bahtera?",
+"nabi nuh as"],
+
+13:["Mukjizat Nabi Musa Laut Merah?",
+"membelah laut dengan menggunakan tongkat"],
+
+24:["Nabi memerintah angin dan jin?",
+"nabi sulaiman as"],
+
+33:["Nabi ditelan paus?",
+"nabi yunus as"],
+
+47:["Kitab Nabi Isa?",
+"kitab injil"],
+
+57:["Bantuan Allah Badar?",
+"bantuan tentera malaikat"],
+
+71:["Badar bulan apa?",
+"bulan ramadan"],
+
+76:["Singa Allah Uhud?",
+"hamzah bin abdul muttalib"],
+
+86:["Idea parit Madinah?",
+"salman al-farisi"],
+
+92:["Tindakan Nabi selepas Fathu Mekah?",
+"menghancurkan berhala-berhala di sekeliling kaabah"]
+
+};
+
+const purple=[2,13,24,33,47,57,71,76,86,92];
+
+let squares={};
+
+function squareXY(num){
+
+let row=9-Math.floor((num-1)/10);
+
+let col;
+
+if((9-row)%2==0)
+col=(num-1)%10;
+else
+col=9-((num-1)%10);
+
+return [col*size,row*size];
+}
+
+function drawBoard(){
+
+ctx.clearRect(0,0,500,500);
+
+for(let n=1;n<=100;n++){
+
+let[x,y]=squareXY(n);
+
+let row=Math.floor(y/size);
+let col=Math.floor(x/size);
+
+let color=((row+col)%2==0)
+?"#c7f9cc":"#80ed99";
+
+if(questions[n])
+color=purple.includes(n)
+?"#cdb4db":"#ffd166";
+
+ctx.fillStyle=color;
+ctx.fillRect(x,y,size,size);
+
+ctx.fillStyle="black";
+ctx.font="10px Arial";
+ctx.fillText(n,x+20,y+25);
+
+squares[n]=[x,y];
+
+}
+
+/* ladders */
+
+ctx.strokeStyle="#8B5A2B";
+ctx.lineWidth=6;
+
+for(let s in ladders){
+
+let[x1,y1]=squares[s];
+let[x2,y2]=squares[ladders[s]];
+
+ctx.beginPath();
+ctx.moveTo(x1+15,y1+15);
+ctx.lineTo(x2+15,y2+15);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(x1+35,y1+15);
+ctx.lineTo(x2+35,y2+15);
+ctx.stroke();
+
+}
+
+/* snakes */
+
+ctx.strokeStyle="#b30000";
+ctx.lineWidth=14;
+
+for(let s in snakes){
+
+let[x1,y1]=squares[s];
+let[x2,y2]=squares[snakes[s]];
+
+ctx.beginPath();
+
+for(let i=0;i<30;i++){
+
+let t=i/29;
+
+let x=x1+(x2-x1)*t+
+20*Math.sin(t*6*Math.PI);
+
+let y=y1+(y2-y1)*t;
+
+if(i==0)
+ctx.moveTo(x+25,y+25);
+else
+ctx.lineTo(x+25,y+25);
+
+}
+
+ctx.stroke();
+
+}
+
+drawPlayers();
+
+}
+
+function drawPlayers(){
+
+for(let i=0;i<2;i++){
+
+let[x,y]=squareXY(playerPos[i]);
+
+ctx.fillStyle=i==0?"red":"blue";
+
+ctx.beginPath();
+
+ctx.arc(
+x+20+i*15,
+y+20,
+10,
+0,
+Math.PI*2);
+
+ctx.fill();
+
+}
+
+}
+
+function popup(html){
+
+document.getElementById("popup").innerHTML=
+`<div class="popup">${html}</div>`;
+}
+
+function closePopup(){
+
+document.getElementById("popup").innerHTML="";
+}
+
+function askNames(){
+
+popup(`
+
+<h3>Nama Player</h3>
+
+Player 1:<br>
+<input id=p1><br><br>
+
+Player 2:<br>
+<input id=p2><br><br>
+
+<button onclick="saveNames()">Start</button>
+
+`);
+
+}
+
+function saveNames(){
+
+let a=document.getElementById("p1").value;
+let b=document.getElementById("p2").value;
+
+if(a)playerNames[0]=a;
+if(b)playerNames[1]=b;
+
+closePopup();
+
+updateStatus();
+
+}
+
+function updateStatus(){
+
+document.getElementById("status")
+.innerText=
+playerNames[currentPlayer]+"'s Turn";
+
+}
+
+function askQuestion(square){
+
+let q=questions[square];
+
+popup(`
+
+<h3>${q[0]}</h3>
+
+<input id=ans>
+
+<br><br>
+
+<button onclick="checkAns(${square})">
+Hantar Jawapan
+</button>
+
+`);
+
+}
+
+function checkAns(square){
+
+let ans=document
+.getElementById("ans")
+.value
+.trim()
+.toLowerCase();
+
+let correct=
+questions[square][1];
+
+closePopup();
+
+if(ans==correct){
+
+popup(`
+✅ Betul!<br>
+Gerak +5
+
+<br><br>
+
+<button onclick="moveBonus(5)">
+Teruskan
+</button>
+`);
+
+}else{
+
+popup(`
+❌ Salah!<br>
+
+Jawapan:
+<b>${correct}</b>
+
+<br><br>
+
+Undur -5
+
+<br><br>
+
+<button onclick="moveBonus(-5)">
+Teruskan
+</button>
+`);
+
+}
+
+}
+
+function moveBonus(move){
+
+closePopup();
+
+playerPos[currentPlayer]+=move;
+
+if(playerPos[currentPlayer]<1)
+playerPos[currentPlayer]=1;
+
+if(playerPos[currentPlayer]>100)
+playerPos[currentPlayer]=100;
+
+drawBoard();
+
+endTurn();
+
+}
+
+document.getElementById("roll").onclick=()=>{
+
+let dice=Math.floor(Math.random()*6)+1;
+
+document.getElementById("dice")
+.innerText="🎲 Dice: "+dice;
+
+moveSteps(dice);
+
+};
+
+function moveSteps(steps){
+
+if(steps==0){
+
+checkSquare();
+return;
+}
+
+playerPos[currentPlayer]++;
+
+if(playerPos[currentPlayer]>100)
+playerPos[currentPlayer]=100;
+
+drawBoard();
+
+setTimeout(()=>moveSteps(steps-1),300);
+
+}
+
+function checkSquare(){
+
+let pos=playerPos[currentPlayer];
+
+if(snakes[pos]){
+
+playerPos[currentPlayer]=snakes[pos];
+drawBoard();
+endTurn();
+return;
+
+}
+
+if(ladders[pos]){
+
+playerPos[currentPlayer]=ladders[pos];
+drawBoard();
+endTurn();
+return;
+
+}
+
+if(questions[pos]&&!asked.has(pos)){
+
+asked.add(pos);
+
+askQuestion(pos);
+
+return;
+
+}
+
+endTurn();
+
+}
+
+function endTurn(){
+
+if(playerPos[currentPlayer]==100){
+
+document.getElementById("status")
+.innerText=
+"🏆 "+playerNames[currentPlayer]+" Wins!";
+
+return;
+
+}
+
+currentPlayer=1-currentPlayer;
+
+updateStatus();
+
+}
+
+drawBoard();
+
+setTimeout(askNames,400);
+
+</script>
+
+</body>
+</html>
